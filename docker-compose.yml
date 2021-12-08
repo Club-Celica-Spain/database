@@ -1,0 +1,45 @@
+version: "3.7"
+
+services:
+  mariadb:
+    image: mariadb:10.6.5
+    container_name: mariadb
+    restart: always
+    networks:
+      - lan
+    ports:
+      - "3306:3306"
+    volumes:
+      # Sets the timezone of the host to the container
+      - /etc/localtime:/etc/localtime:ro
+      # DB
+      - ./data/mariadb:/var/lib/mysql
+      # Custom configuration
+      - ./conf/mariadb-custom.cnf:/etc/mysql/mariadb.conf.d/mariadb-custom.cnf
+      # Logs
+      - /var/log/mariadb:/var/log/mysql
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    labels:
+      traefik.enable: "false"
+
+  backup:
+    build: ./custom
+    container_name: database-backup
+    restart: always
+    networks:
+      - lan
+    volumes:
+      # Sets the timezone of the host to the container
+      - /etc/localtime:/etc/localtime:ro
+      # Copy backup to host
+      - /srv/backup/database/mariadb:/srv/backup/database/mariadb
+    command: crond -f -d 8
+    labels:
+      traefik.enable: "false"
+    depends_on:
+      - mariadb
+
+networks:
+  lan:
+    external: true
